@@ -1,0 +1,20 @@
+{
+	"namespace": "RiftedUtils",
+	"displayName": "Rifted Utils",
+	"version": "1.0.0",
+	"synchronyVersion": "4.1.1",
+	"description": "Adds a couple extra features to the Rift of the Necrodancer Level Editor.",
+	"author": "Katie",
+	"dependencies": {},
+	"api": {"scriptPath":""},
+	"icon": "Icon.png",
+	"banner": "Banner.png",
+	"tags": [],
+	"name": "RiftedUtils_io_4775925",
+	"changelog": "",
+	"homepageURL": "https://mod.io/g/crypt/m/riftedutils",
+	"modioID": "4775925",
+	"modioUserID": 15061904,
+	"pendingVersion": "1.0.0",
+	"visibility": 2
+}
