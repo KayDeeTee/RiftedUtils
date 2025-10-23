@@ -12,6 +12,7 @@ local riftedBeatmap = require "Rifted.RiftedBeatmap"
 local riftedRenderer = require "Rifted.RiftedRenderer"
 local riftedSim = require "Rifted.RiftedSim"
 local riftedFormat = require "Rifted.RiftedFormat"
+local riftedMusic = require "Rifted.RiftedMusic"
 local riftedTimeline = require "Rifted.RiftedTimeline"
 local riftedTool = require "Rifted.RiftedTool"
 local render = require "necro.render.Render"
@@ -22,6 +23,9 @@ local input = require "system.game.Input"
 local riftedUI = require "Rifted.RiftedUI"
 local customActions = require "necro.game.data.CustomActions"
 local tile = require "necro.game.tile.Tile"
+
+local floor = math.floor
+local ceil = math.ceil
 
 local getColor = riftedRenderer.getColor
 
@@ -45,6 +49,19 @@ local state_cache = {}
 local cached_chart = ""
 local state_length = 0
 local state_index = 0
+
+local function getVisibleTileRect()
+    local subdiv = riftedBeatmap.getSubdiv()
+    local invTileSize = 1 / render.TILE_SIZE
+    local inverse = transformationMatrix.inverse(render.getTransform(render.Transform.CAMERA))
+    local rect = inverse.transformRect(gfx.getScreenRect())
+    local x1 = rect[1] * invTileSize - 1.001
+    local y1 = (rect[2] * invTileSize - 2.001 * subdiv)
+    local x2 = (rect[1] + rect[3]) * invTileSize + 1.001
+    local y2 = ((rect[2] + rect[4]) * invTileSize + 2.001 * subdiv)
+    return floor(x1), floor(y1), ceil(x2 - x1), ceil(y2 - y1)
+end
+
 
 local function lerp(a, b, t) return a * (1 - t) + b * t end
 
@@ -175,8 +192,8 @@ function draw_minimap()
 
     --draw minimap
 
-    if cached_chart ~= riftedBeatmap.getImportUniqueID() then
-        cached_chart = riftedBeatmap.getImportUniqueID()
+    if cached_chart ~= riftedMusic.getLoadedFileName() then
+        cached_chart = riftedMusic.getLoadedFileName()
         state_cache = {}
         state_length = 0
         max_density = 2
@@ -189,11 +206,21 @@ function draw_minimap()
         end
     end
 
-    for _ = 0, 32 do
-        state_index = state_index + 1
-        state_index = state_index % ((final_beat) * riftedBeatmap.getSubdiv())
-        state_cache[state_index] = riftedSim.getState(state_index)
+    local x,y,w,h = getVisibleTileRect()
+    y = -y - ( (riftedBeatmap.getCountdownTicks() + 4) * riftedBeatmap.getSubdiv() )
+    y = floor( y )
+    h = ceil( h + 4 * riftedBeatmap.getSubdiv() )
+    
+    for i = y, y+h do
+        state_cache[i] = riftedSim.getState(i)
     end
+
+    --for _ = 0, 64 do
+    --    state_index = state_index + 1
+    --    state_index = state_index % ((final_beat) * riftedBeatmap.getSubdiv())
+    --    state_cache[state_index] = riftedSim.getState(state_index)
+    --end
+
     if minimap_mode == 1 then --draw hit events
         for i = 0, (final_beat) * riftedBeatmap.getSubdiv() do
             local state = state_cache[i]
@@ -201,7 +228,7 @@ function draw_minimap()
                 for _, entity in ipairs(state.hits) do
                     local edata = entity.data
                     local proto = riftedSchema.getType(entity.type)
-                    local friendlyName = proto.friendlyName and proto.friendlyName.name or etype or "???"
+                    --local friendlyName = proto.friendlyName and proto.friendlyName.name or etype or "???"
 
                     --log.info( friendlyName )
                     if proto then
@@ -211,6 +238,7 @@ function draw_minimap()
                             else
                                 if proto.name == "Rifted_E9888" then
                                     wyrm_hits = wyrm_hits + 1
+                                    enemy_hits = enemy_hits + 1
                                     goto continue --this is fucking insane who designs a language without continues wtf???????
                                 else
                                     enemy_hits = enemy_hits + 1
@@ -225,7 +253,6 @@ function draw_minimap()
                             local c = color.opacity(1)
 
                             c = getColor(proto.name)
-
 
                             local box = {
                                 rect = { ex, ey - riftedBeatmap.getSubdiv(), (2 / riftedBeatmap.getSubdiv()) / camera.getViewScale(), 2 / camera.getViewScale() },
