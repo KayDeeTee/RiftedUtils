@@ -94,9 +94,12 @@ function draw_minimap()
 
     local world_x = tileSize * 3.5 + ((0.5 * 4) / camera.getViewScale() / riftedBeatmap.getSubdiv())
     local world_x2 = tileSize * 3.5 + ((4 * 4) / camera.getViewScale() / riftedBeatmap.getSubdiv())
+
+    local scaleFactor = riftedUI.getScaleFactor()
+
     screen_x, screen_y = mtx.transformPoint(world_x, 0)
     screen_x2, screen_y = mtx.transformPoint(world_x2, 0)
-    screen_y = 56
+    screen_y = 56 * scaleFactor
 
     local cx, cy = riftedCamera.getViewCenter()
 
@@ -110,6 +113,8 @@ function draw_minimap()
     local bpm_offset = 0
 
     local maxBeat = offset
+
+    
 
     for entity in ecs.entitiesWithComponents { "Rifted_object" } do
         local data = entity.Rifted_object.data
@@ -192,8 +197,8 @@ function draw_minimap()
 
     --draw minimap
 
-    if cached_chart ~= riftedMusic.getLoadedFileName() then
-        cached_chart = riftedMusic.getLoadedFileName()
+    if cached_chart ~= (riftedMusic.getLoadedFileName() .. riftedBeatmap.getDifficulty()) then
+        cached_chart = (riftedMusic.getLoadedFileName() .. riftedBeatmap.getDifficulty())
         state_cache = {}
         state_length = 0
         max_density = 2
@@ -276,7 +281,7 @@ function draw_minimap()
             uppercase = false,
             font = riftedUI.Font.MEDIUM,
             x = screen_x - 2,
-            y = gfx.getHeight() - 32,
+            y = gfx.getHeight()/ scaleFactor - 32 ,
             text = string.format("%d enemies (%.1f%% wyrms)", enemy_hits, (wyrm_hits / enemy_hits) * 100),
             alignX = 1,
             alignY = 0,
@@ -291,7 +296,7 @@ function draw_minimap()
             uppercase = false,
             font = riftedUI.Font.MEDIUM,
             x = screen_x - 2,
-            y = gfx.getHeight() - 44,
+            y = gfx.getHeight()/ scaleFactor - 44,
             text = string.format("%d heals", food_hits),
             alignX = 1,
             alignY = 0,
@@ -401,8 +406,10 @@ event.tick.add("checkInput", { order = "customHotkeys", sequence = 2 }, function
     local percent = (gfx.getHeight() - cursorY) / (gfx.getHeight() - screen_y)
     --local extra_scale = (riftedBeatmap.getSubdiv() / 4)-1
 
+    local scaleFactor = riftedUI.getScaleFactor()
+
     if not inputBlocked then
-        if cursorX > screen_x and cursorX < screen_x2 and cursorY > screen_y then
+        if cursorX > screen_x * scaleFactor and cursorX < screen_x2 * scaleFactor and cursorY > screen_y then
             if input.mousePress() then
                 dragging = true
             end
