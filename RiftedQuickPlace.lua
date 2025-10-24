@@ -274,20 +274,22 @@ customActions.registerHotkey {
 
 local function draw_text()
 	local x,y = get_timeline_position(0)
-    ui.drawText {
-        buffer = render.Buffer.UI_EDITOR,
-        uppercase = false,
-        font = riftedUI.Font.MEDIUM,
-        x = x + 4,
-        y = y,
-        text = string.format("%d/%d", numerator, denominator),
-        alignX = 0,
-        alignY = 0,
-        size = 12,
-        fillColor = color.YELLOW,
-        outlineColor = color.BLACK,
-        z = -10000,
-    }
+	if numerator ~= denominator then
+		ui.drawText {
+			buffer = render.Buffer.UI_EDITOR,
+			uppercase = false,
+			font = riftedUI.Font.MEDIUM,
+			x = x + 4,
+			y = y,
+			text = string.format("%d/%d", numerator, denominator),
+			alignX = 0,
+			alignY = 0,
+			size = 12,
+			fillColor = color.YELLOW,
+			outlineColor = color.BLACK,
+			z = -10000,
+		}
+	end
 end
 
 local highlight_beat = 0
