@@ -15,6 +15,7 @@ local riftedFormat = require "Rifted.RiftedFormat"
 local riftedMusic = require "Rifted.RiftedMusic"
 local riftedTimeline = require "Rifted.RiftedTimeline"
 local riftedTool = require "Rifted.RiftedTool"
+local riftedTypeFilter = require "Rifted.RiftedTypeFilter"
 local render = require "necro.render.Render"
 local color = require "system.utils.Color"
 local ecs = require "system.game.Entities"
@@ -23,6 +24,8 @@ local input = require "system.game.Input"
 local riftedUI = require "Rifted.RiftedUI"
 local customActions = require "necro.game.data.CustomActions"
 local tile = require "necro.game.tile.Tile"
+local settings = require "necro.config.Settings"
+local settingsStorage = require "necro.config.SettingsStorage"
 
 local floor = math.floor
 local ceil = math.ceil
@@ -49,6 +52,48 @@ local state_cache = {}
 local cached_chart = ""
 local state_length = 0
 local state_index = 0
+
+local typeFilterEnabled
+
+
+local function makeMinimapOptions(args)
+	settings.user.group {
+		id = ("minimap.%s"):format(args.group),
+		name = args.name,
+		order = args.order,
+		desc = args.desc,
+		autoRegister = true,
+	}
+	return {
+		id = args.group,
+		offset = settings.user.number {
+			autoRegister = true,
+			id = ("minimap.%s.offset"):format(args.group),
+			name = "Minimap offset",
+			default = 3.5,
+			step = .1,
+			minimum = -10,
+			maximum = 10,
+			order = 20,
+		}
+	}
+end
+
+local mapOpts = makeMinimapOptions {
+	name = "Main minimap options",
+	group = "main",
+	desc = "Configure the settings of the minimap",
+	order = 1500,
+	defaults = {
+		color = color.hex(0x2288AA),
+		scale = 1,
+		offset = 0,
+		mirror = false,
+	},
+}
+
+local cfg = settingsStorage.get
+
 
 local function getVisibleTileRect()
     local subdiv = riftedBeatmap.getSubdiv()
@@ -80,6 +125,13 @@ local function col_lerp(amt)
     end
 end
 
+local function isEntityVisible(entity)
+    if typeFilterEnabled and entity then
+        return riftedTypeFilter.isTypeVisible(entity)
+    end
+    return true
+end
+
 function draw_minimap()
     if minimap_mode == 0 then
         return
@@ -87,13 +139,16 @@ function draw_minimap()
     if riftedCamera.isRotated() then
         return
     end
+    
+    local offsetX = cfg(mapOpts.offset)
+    
     local buffer = render.getBuffer(render.Buffer.OBJECT)
 
     local mtx = transformationMatrix.inverse(render.getCameraOptions(render.Transform.EDITOR).transform)
         .combine(render.getCameraOptions(render.Transform.CAMERA).transform)
 
-    local world_x = tileSize * 3.5 + ((0.5 * 4) / camera.getViewScale() / riftedBeatmap.getSubdiv())
-    local world_x2 = tileSize * 3.5 + ((4 * 4) / camera.getViewScale() / riftedBeatmap.getSubdiv())
+    local world_x = tileSize * offsetX + ((0.5 * 4) / camera.getViewScale() / riftedBeatmap.getSubdiv())
+    local world_x2 = tileSize * offsetX + ((4 * 4) / camera.getViewScale() / riftedBeatmap.getSubdiv())
 
     local scaleFactor = riftedUI.getScaleFactor()
 
@@ -114,7 +169,7 @@ function draw_minimap()
 
     local maxBeat = offset
 
-    
+    typeFilterEnabled = riftedTypeFilter.isActive()
 
     for entity in ecs.entitiesWithComponents { "Rifted_object" } do
         local data = entity.Rifted_object.data
@@ -122,7 +177,7 @@ function draw_minimap()
         local ex, ey = data.track, data.start
         local c = color.opacity(1)
 
-        ex = tileSize * 3.5 + ((ex * 4) / camera.getViewScale() / riftedBeatmap.getSubdiv())
+        ex = tileSize * offsetX + ((ex * 4) / camera.getViewScale() / riftedBeatmap.getSubdiv())
         ey = cy - 2 + ((-ey / final_beat) * (gfx.getHeight() - screen_y)) / camera.getViewScale()
         local typename = data.type
 
@@ -226,7 +281,7 @@ function draw_minimap()
     --    state_cache[state_index] = riftedSim.getState(state_index)
     --end
 
-    if minimap_mode == 1 then --draw hit events
+    if minimap_mode ~= 0 then --draw hit events
         for i = 0, (final_beat) * riftedBeatmap.getSubdiv() do
             local state = state_cache[i]
             if state then
@@ -250,22 +305,30 @@ function draw_minimap()
                                 end
                             end
 
-                            local ex, ey = entity.x, i / riftedBeatmap.getSubdiv()
-                            ex = tileSize * 3.5 + ((ex * 4) / camera.getViewScale() / riftedBeatmap.getSubdiv())
-                            ey = cy - 2 + ((-ey / final_beat) * (gfx.getHeight() - screen_y)) / camera.getViewScale()
+                            local filtered = not isEntityVisible( entity.type )
+                            if minimap_mode == 1 then
+                                filtered = false
+                            elseif minimap_mode == 3 then
+                                filtered = not filtered
+                            end
+                            if not filtered then
+                                local ex, ey = entity.x, i / riftedBeatmap.getSubdiv()
+                                ex = tileSize * offsetX + ((ex * 4) / camera.getViewScale() / riftedBeatmap.getSubdiv())
+                                ey = cy - 2 + ((-ey / final_beat) * (gfx.getHeight() - screen_y)) / camera.getViewScale()
 
 
-                            local c = color.opacity(1)
+                                local c = color.opacity(1)
 
-                            c = getColor(proto.name)
+                                c = getColor(proto.name)
 
-                            local box = {
-                                rect = { ex, ey - riftedBeatmap.getSubdiv(), (2 / riftedBeatmap.getSubdiv()) / camera.getViewScale(), 2 / camera.getViewScale() },
-                                color = c,
-                                z = -10000,
-                            }
+                                local box = {
+                                    rect = { ex, ey - riftedBeatmap.getSubdiv(), (2 / riftedBeatmap.getSubdiv()) / camera.getViewScale(), 2 / camera.getViewScale() },
+                                    color = c,
+                                    z = -10000,
+                                }
 
-                            buffer.draw(box)
+                                buffer.draw(box)
+                            end
                         elseif proto.trap then
 
                         else
@@ -281,7 +344,7 @@ function draw_minimap()
             uppercase = false,
             font = riftedUI.Font.MEDIUM,
             x = screen_x - 2,
-            y = gfx.getHeight()/ scaleFactor - 32 ,
+            y = gfx.getHeight() / scaleFactor - 32 ,
             text = string.format("%d enemies (%.1f%% wyrms)", enemy_hits, (wyrm_hits / enemy_hits) * 100),
             alignX = 1,
             alignY = 0,
@@ -389,7 +452,7 @@ event.tick.add("checkInput", { order = "customHotkeys", sequence = 2 }, function
     if minimap_mode == 0 then
         return
     end
-    if input.mouseRelease() then
+    if input.mouseRelease(1) then
         dragging = false
     end
 
@@ -410,7 +473,7 @@ event.tick.add("checkInput", { order = "customHotkeys", sequence = 2 }, function
 
     if not inputBlocked then
         if cursorX > screen_x * scaleFactor and cursorX < screen_x2 * scaleFactor and cursorY > screen_y then
-            if input.mousePress() then
+            if input.mousePress(1) then
                 dragging = true
             end
         end
@@ -431,7 +494,7 @@ customActions.registerHotkey {
     name = "Minimap Toggle",
     keyBinding = "lshift+m",
     callback = function()
-        minimap_mode = (minimap_mode + 1) % 3
+        minimap_mode = (minimap_mode + 1) % 4
         max_density = 2
     end,
 }

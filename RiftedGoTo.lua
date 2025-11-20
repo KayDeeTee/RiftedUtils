@@ -20,7 +20,7 @@ local floor = math.floor
 local active = false
 local defaultX, defaultY = 0, render.TILE_SIZE
 
-local function beat_to_time( beat )
+function riftedGoTo.beat_to_time( beat )
 	local spb = 60 / riftedBeatmap.getBPM()
 	if beat < 0 then
 		return 0
@@ -57,7 +57,7 @@ local function seekTime( time )
 	else
 		while current_time < time do
 			current_guess = current_guess + 1
-			current_time = beat_to_time(current_guess)
+			current_time = riftedGoTo.beat_to_time(current_guess)
 		end
 		current_guess = current_guess - 1
 	end
