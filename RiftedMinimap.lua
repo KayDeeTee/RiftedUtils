@@ -163,6 +163,7 @@ function draw_minimap()
     local enemy_hits = 0
     local food_hits = 0
     local wyrm_hits = 0
+	local vibe_counts = 0
 
     local last_bpm = -1
     local bpm_offset = 0
@@ -236,6 +237,7 @@ function draw_minimap()
                     color = vibe_bg,
                     z = -10000,
                 }
+                vibe_counts = vibe_counts + 1
 
                 buffer.draw(box)
             end
@@ -344,7 +346,7 @@ function draw_minimap()
             uppercase = false,
             font = riftedUI.Font.MEDIUM,
             x = screen_x - 2,
-            y = gfx.getHeight() / scaleFactor - 32 ,
+            y = gfx.getHeight() / scaleFactor - 44 ,
             text = string.format("%d enemies (%.1f%% wyrms)", enemy_hits, (wyrm_hits / enemy_hits) * 100),
             alignX = 1,
             alignY = 0,
@@ -359,7 +361,7 @@ function draw_minimap()
             uppercase = false,
             font = riftedUI.Font.MEDIUM,
             x = screen_x - 2,
-            y = gfx.getHeight()/ scaleFactor - 44,
+            y = gfx.getHeight()/ scaleFactor - 56,
             text = string.format("%d heals", food_hits),
             alignX = 1,
             alignY = 0,
@@ -368,6 +370,22 @@ function draw_minimap()
             outlineColor = color.BLACK,
             z = -10000,
         }
+        
+		ui.drawText {
+            buffer = render.Buffer.UI_EDITOR,
+            uppercase = false,
+            font = riftedUI.Font.MEDIUM,
+            x = screen_x - 2,
+            y = gfx.getHeight()/ scaleFactor - 68,
+            text = string.format("%d vibes", vibe_counts),
+            alignX = 1,
+            alignY = 0,
+            size = 12,
+            fillColor = color.opacity(1),
+            outlineColor = color.BLACK,
+            z = -10000,
+        }
+        
     else -- draw density
         for i = 0, (final_beat) * riftedBeatmap.getSubdiv() do
             local from = i - riftedBeatmap.getSubdiv()
