@@ -1,16 +1,18 @@
 local riftedBpmAst = {}
 
 local render = require "necro.render.Render"
-local chat = require "necro.client.Chat"
 local enum = require "system.utils.Enum"
 local gfx = require "system.gfx.GFX"
-local menu = require "necro.menu.Menu"
 local customActions = require "necro.game.data.CustomActions"
 local settings = require "necro.config.Settings"
 local riftedTool = require "Rifted.RiftedTool"
 local riftedCategory = require "Rifted.RiftedCategory"
 local riftedSearchFilter = require "Rifted.RiftedSearchFilter"
 local riftedBeatmap = require "Rifted.RiftedBeatmap"
+local riftedUI = require "Rifted.RiftedUI"
+
+local menu = require "necro.menu.Menu"
+local chat = require "necro.client.Chat"
 
 local default = 100
 local previousBpm = nil
@@ -343,13 +345,16 @@ customActions.registerHotkey {
     name = "BPM advanced",
     keyBinding = "lshift+b",
     callback = function ()
-		menu.open("textEntry", {
-			label = L"Enter BPM",
-			text = tostring(previousBpm),
-			autoSelect = true,
-			callback = textEntryCallback,
-			cancelCallback = nil,
-		})
+		local inputBlocked = chat.isBlockingInput() or menu.isOpen() or not not riftedUI.getActiveTextPrompt()
+		if not inputBlocked then
+			menu.open("textEntry", {
+				label = L"Enter BPM",
+				text = tostring(previousBpm),
+				autoSelect = true,
+				callback = textEntryCallback,
+				cancelCallback = nil,
+			})
+		end
     end,
 }
 

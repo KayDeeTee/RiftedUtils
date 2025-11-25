@@ -24,6 +24,9 @@ local riftedObject = require "Rifted.RiftedObject"
 local riftedFormat = require "Rifted.RiftedFormat"
 local riftedSchema = require "Rifted.RiftedSchema"
 local riftedCommand = require "Rifted.RiftedCommand"
+local riftedUI = require "Rifted.RiftedUI"
+local chat = require "necro.client.Chat"
+local menu = require "necro.menu.Menu"
 
 local cursorX = 0
 local cursorY = 0
@@ -136,33 +139,39 @@ local numerator = 1.0
 local denominator = 1.0
 
 local function adjust_snap(amt, shift)
-	if shift then
-		numerator = numerator + amt
-		if numerator <= 0 then
-			numerator = 48
-		end
-		if numerator > 48 then
-			numerator = 1
-		end
-	else
-		denominator = denominator + amt
-		if denominator <= 0 then
-			denominator = 48
-		end
-		if denominator > 48 then
-			denominator = 1
+	local inputBlocked = chat.isBlockingInput() or menu.isOpen() or not not riftedUI.getActiveTextPrompt()
+	if not inputBlocked then
+		if shift then
+			numerator = numerator + amt
+			if numerator <= 0 then
+				numerator = 48
+			end
+			if numerator > 48 then
+				numerator = 1
+			end
+		else
+			denominator = denominator + amt
+			if denominator <= 0 then
+				denominator = 48
+			end
+			if denominator > 48 then
+				denominator = 1
+			end
 		end
 	end
 end
 
 local function move_cursor(dx, dy)
-	local speed = (riftedBeatmap.getSubdiv() * numerator) / denominator
-	dx, dy = dx * speed, dy * speed
-	if riftedMusic.isPreviewing() then
-		dy = -riftedMusic.seekBeats(-dy)
+	local inputBlocked = chat.isBlockingInput() or menu.isOpen() or not not riftedUI.getActiveTextPrompt()
+	if not inputBlocked then
+		local speed = (riftedBeatmap.getSubdiv() * numerator) / denominator
+		dx, dy = dx * speed, dy * speed
+		if riftedMusic.isPreviewing() then
+			dy = -riftedMusic.seekBeats(-dy)
+		end
+		riftedCamera.moveRelative(dx * 24, dy * 24, true)
+		--riftedTool.move(cursorX, cursorY)
 	end
-	riftedCamera.moveRelative(dx * 24, dy * 24, true)
-	--riftedTool.move(cursorX, cursorY)
 end
 
 customActions.registerHotkey {
@@ -234,11 +243,14 @@ local function get_brush_info()
 end
 
 function click_brush_track( track )
-  	local brush = get_brush_info()
-  	local pos = ((riftedTimeline.getActionRow() * -1)-1) / riftedBeatmap.getSubdiv()
-  	if brush_is_enemy() then
-  		insert_enemy( brush.EnemyId, track, pos + 9, brush.ShouldStartFacingRight, brush.ShouldMoveOnDupletMeter or false, brush.BlademasterAttackRow or -1)
-  	end
+	local inputBlocked = chat.isBlockingInput() or menu.isOpen() or not not riftedUI.getActiveTextPrompt()
+	if not inputBlocked then
+		local brush = get_brush_info()
+		local pos = ((riftedTimeline.getActionRow() * -1)-1) / riftedBeatmap.getSubdiv()
+		if brush_is_enemy() then
+			insert_enemy( brush.EnemyId, track, pos + 9, brush.ShouldStartFacingRight, brush.ShouldMoveOnDupletMeter or false, brush.BlademasterAttackRow or -1)
+		end
+	end
 end
 
 customActions.registerHotkey {

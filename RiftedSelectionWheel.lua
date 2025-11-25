@@ -10,7 +10,10 @@ local riftedShape = require "Rifted.RiftedShape"
 local riftedFormat = require "Rifted.RiftedFormat"
 local riftedSchema = require "Rifted.RiftedSchema"
 local riftedRenderer = require "Rifted.RiftedRenderer"
+local riftedUI = require "Rifted.RiftedUI"
 
+local menu = require "necro.menu.Menu"
+local chat = require "necro.client.Chat"
 local camera = require "necro.render.Camera"
 local input = require "system.game.Input"
 local render = require "necro.render.Render"
@@ -156,105 +159,109 @@ local function draw_circle( buffer, radius_inner, radius_outer, steps, start_hig
 end
 
 local function draw_wheel()
+	
+	local inputBlocked = chat.isBlockingInput() or menu.isOpen() or not not riftedUI.getActiveTextPrompt()
 
-	if not input.keyDown("g") then
-		if cx ~= nil then
-		   	local cx2, cy2 = riftedInput.getCursorPosition()
-		   	local ox, oy = cx2-cx, cy2-cy --offset x, offset y
-		   	local dist = ox*ox + oy*oy
-		   	dist = math.sqrt(dist)
+	if not inputBlocked then
 
-		   	local angle = math.atan2(oy,ox)
-		   	if angle < 0 then
-		   		angle = angle + math.pi * 2
-		   	end
+		if not input.keyDown("g") then
+			if cx ~= nil then
+				local cx2, cy2 = riftedInput.getCursorPosition()
+				local ox, oy = cx2-cx, cy2-cy --offset x, offset y
+				local dist = ox*ox + oy*oy
+				dist = math.sqrt(dist)
 
-		   	local depth = 0
-		   	for x=1,4 do
-		   		if dist > ring_radii[x] then
-		   			depth = depth + 1
-		   		end
-		   	end
+				local angle = math.atan2(oy,ox)
+				if angle < 0 then
+					angle = angle + math.pi * 2
+				end
 
-		   	local enemy_type = (math.floor((angle / (math.pi * 2)) * 10 + 0.5) + 2) % 10
-		   	select_enemy( depth, enemy_type )
+				local depth = 0
+				for x=1,4 do
+					if dist > ring_radii[x] then
+						depth = depth + 1
+					end
+				end
+
+				local enemy_type = (math.floor((angle / (math.pi * 2)) * 10 + 0.5) + 2) % 10
+				select_enemy( depth, enemy_type )
+			end
+
+
+			cx, cy = nil, nil
+			return 
 		end
 
+		if cx == nil then
+			facing = not riftedInput.checkHold(controls.Misc.EDITOR_MODIFIER)
+			cx, cy = riftedInput.getCursorPosition()
+		end
 
-		cx, cy = nil, nil
-		return 
-	end
+		local buffer = render.getBuffer(render.Buffer.UI_CUSTOM)
 
-	if cx == nil then
-		facing = not riftedInput.checkHold(controls.Misc.EDITOR_MODIFIER)
-		cx, cy = riftedInput.getCursorPosition()
-	end
+		local c = color.opacity(1)
+		
+		--[[
+		for x = 1, 5 do
 
-	local buffer = render.getBuffer(render.Buffer.UI_CUSTOM)
+			local box = {
+				rect = { cx, cy, 256, 1 },
+				color = c,
+				z = -10000,
+				angle = (math.pi * 2) * (x/5) - math.pi/2,
+				origin = {0,0},
+			}
 
-    local c = color.opacity(1)
-    
-    --[[
-    for x = 1, 5 do
+			buffer.draw(box)
 
-	    local box = {
-	        rect = { cx, cy, 256, 1 },
-	        color = c,
-	        z = -10000,
-	        angle = (math.pi * 2) * (x/5) - math.pi/2,
-	        origin = {0,0},
-	    }
+		end
+		]] --
 
-	    buffer.draw(box)
+		local steps = 30
+		local radius_inner = 64
+		local radius_outer = 128
 
-   	end
-   	]] --
+		local cx2, cy2 = riftedInput.getCursorPosition()
+		local ox, oy = cx2-cx, cy2-cy --offset x, offset y
+		local dist = ox*ox + oy*oy
+		dist = math.sqrt(dist)
 
-   	local steps = 30
-   	local radius_inner = 64
-   	local radius_outer = 128
+		local angle = math.atan2(oy,ox)
+		if angle < 0 then
+			angle = angle + math.pi * 2
+		end
 
-   	local cx2, cy2 = riftedInput.getCursorPosition()
-   	local ox, oy = cx2-cx, cy2-cy --offset x, offset y
-   	local dist = ox*ox + oy*oy
-   	dist = math.sqrt(dist)
+		for x=1, 3 do
+			local inner = ring_radii[x]
+			local outer = ring_radii[x+1]
 
-   	local angle = math.atan2(oy,ox)
-   	if angle < 0 then
-   		angle = angle + math.pi * 2
-   	end
+			local selected_region = -1
+			if dist >= inner and dist < outer then
+			selected_region = (math.floor((angle / (math.pi * 2)) * 10 + 0.5) + 2) % 10
+			end
+			draw_circle(buffer, inner, outer, steps, selected_region*3+1, selected_region*3+4, x)
+		end
 
-   	for x=1, 3 do
-   		local inner = ring_radii[x]
-   		local outer = ring_radii[x+1]
-
+		--[[
 		local selected_region = -1
-	   	if dist >= inner and dist < outer then
-   		selected_region = (math.floor((angle / (math.pi * 2)) * 10 + 0.5) + 2) % 10
-   		end
-   		draw_circle(buffer, inner, outer, steps, selected_region*3+1, selected_region*3+4, x)
-   	end
+		if dist >= 64 and dist < 128 then
+			selected_region = (math.floor((angle / (math.pi * 2)) * 10 + 0.5) + 2) % 10
+		end
+		draw_circle(buffer, 64, 128, steps, selected_region*3+1, selected_region*3+4, 1)
 
-   	--[[
-   	local selected_region = -1
-   	if dist >= 64 and dist < 128 then
-   		selected_region = (math.floor((angle / (math.pi * 2)) * 10 + 0.5) + 2) % 10
-   	end
-   	draw_circle(buffer, 64, 128, steps, selected_region*3+1, selected_region*3+4, 1)
+		selected_region = -1
+		if dist >= 128 and dist < 180 then
+			selected_region = (math.floor((angle / (math.pi * 2)) * 10 + 0.5) + 2) % 10
+		end
+		draw_circle(buffer, 128, 180, steps, selected_region*3+1, selected_region*3+4, 2)
 
-   	selected_region = -1
-   	if dist >= 128 and dist < 180 then
-   		selected_region = (math.floor((angle / (math.pi * 2)) * 10 + 0.5) + 2) % 10
-   	end
-   	draw_circle(buffer, 128, 180, steps, selected_region*3+1, selected_region*3+4, 2)
-
-   	selected_region = -1
-   	if dist >= 180 and dist < 236 then
-   		selected_region = (math.floor((angle / (math.pi * 2)) * 10 + 0.5) + 2) % 10
-   	end
-   	draw_circle(buffer, 180, 236, steps, selected_region*3+1, selected_region*3+4, 3)
-	]]--
-
+		selected_region = -1
+		if dist >= 180 and dist < 236 then
+			selected_region = (math.floor((angle / (math.pi * 2)) * 10 + 0.5) + 2) % 10
+		end
+		draw_circle(buffer, 180, 236, steps, selected_region*3+1, selected_region*3+4, 3)
+		]]--
+	end
 
 end
 

@@ -512,8 +512,10 @@ customActions.registerHotkey {
     name = "Minimap Toggle",
     keyBinding = "lshift+m",
     callback = function()
-        minimap_mode = (minimap_mode + 1) % 4
-        max_density = 2
+		local inputBlocked = chat.isBlockingInput() or menu.isOpen() or not not riftedUI.getActiveTextPrompt()
+		if not inputBlocked then
+			minimap_mode = (minimap_mode + 1) % 4
+		end
     end,
 }
 
