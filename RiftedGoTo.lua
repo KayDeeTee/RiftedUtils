@@ -1,19 +1,18 @@
 local riftedGoTo = {}
 
 local render = require "necro.render.Render"
+local chat = require "necro.client.Chat"
 local enum = require "system.utils.Enum"
 local gfx = require "system.gfx.GFX"
 local riftedCamera = require "Rifted.RiftedCamera"
 local riftedMusic = require "Rifted.RiftedMusic"
 local riftedCamera = require "Rifted.RiftedCamera"
 local riftedBeatmap = require "Rifted.RiftedBeatmap"
+local menu = require "necro.menu.Menu"
 local customActions = require "necro.game.data.CustomActions"
 local riftedTimeline = require "Rifted.RiftedTimeline"
 local riftedTimeScale = require "Rifted.RiftedTimeScale"
 local riftedUI = require "Rifted.RiftedUI"
-
-local menu = require "necro.menu.Menu"
-local chat = require "necro.client.Chat"
 local settings = require "necro.config.Settings"
 
 local floor = math.floor
@@ -93,10 +92,7 @@ customActions.registerHotkey {
     name = "Go to beat",
     keyBinding = "lcontrol+g",
     callback = function ()
-		local inputBlocked = chat.isBlockingInput() or menu.isOpen() or not not riftedUI.getActiveTextPrompt()
-		if not inputBlocked then
-			chat.openChatbox(L"Go to", goToBeatPromptID)
-		end
+        chat.openChatbox(L"Go to", goToBeatPromptID)
     end,
 }
 
